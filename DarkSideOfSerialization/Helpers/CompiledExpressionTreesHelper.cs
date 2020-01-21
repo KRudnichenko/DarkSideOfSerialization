@@ -1,0 +1,158 @@
+﻿using System;
+using System.Diagnostics;
+using System.IO;
+using System.Linq.Expressions;
+using System.Reflection;
+// ReSharper disable AssignNullToNotNullAttribute
+
+namespace DarkSideOfSerialization.Helpers
+{
+    public static class CompiledExpressionTreesHelper
+    {
+        public static Action<TTarget, TParam> GenerateSetter<TTarget, TParam>(PropertyInfo propertyInfo)
+        {
+            var setMethod = propertyInfo.GetSetMethod(true);
+            var targetParam = Expression.Parameter(typeof(TTarget));
+            var valueParam = Expression.Parameter(typeof(TParam));
+
+            var callSetter = Expression.Call(targetParam, setMethod, valueParam);
+            
+            return Expression
+                .Lambda<Action<TTarget, TParam>>(callSetter, targetParam, valueParam)
+                .Compile();
+        }
+
+        public static Action<object, object> GenerateSetter(PropertyInfo propertyInfo)
+        {
+            var setMethod = propertyInfo.GetSetMethod(true);
+            var targetParam = Expression.Parameter(typeof(object));
+            var valueParam = Expression.Parameter(typeof(object));
+
+            var convertedTarget = Expression.Convert(targetParam, propertyInfo.DeclaringType);
+            var convertedValue = Expression.Convert(valueParam, propertyInfo.PropertyType);
+
+            var callSetter = Expression.Call(convertedTarget, setMethod, convertedValue);
+
+            return Expression
+                .Lambda<Action<object, object>>(callSetter, targetParam, valueParam)
+                .Compile();
+        }
+
+        public static Action<object, TProperty> GenerateSetter<TProperty>(PropertyInfo propertyInfo)
+        {
+            var setMethod = propertyInfo.GetSetMethod(true);
+            var targetParam = Expression.Parameter(typeof(object));
+            var valueParam = Expression.Parameter(typeof(TProperty));
+            var targetType = propertyInfo.DeclaringType;
+            Debug.Assert(targetType != null, nameof(targetType) + " != null");
+
+            var convertedTarget = Expression.Convert(targetParam, targetType);
+
+            var callSetter = Expression.Call(convertedTarget, setMethod, valueParam);
+            return Expression
+                .Lambda<Action<object, TProperty>>(callSetter, targetParam, valueParam)
+                .Compile();
+        }
+
+        public static Func<TTarget, TProperty> GenerateGetter<TTarget, TProperty>(PropertyInfo propertyInfo)
+        {
+            var sourceGetMethod = propertyInfo.GetGetMethod(true);
+            Debug.Assert(sourceGetMethod != null, nameof(sourceGetMethod) + " != null");
+
+            var param = Expression.Parameter(typeof(TTarget), "param");
+
+            Expression getValueExpression = Expression.Property(param, propertyInfo.Name);
+
+            return Expression
+                .Lambda<Func<TTarget, TProperty>>(getValueExpression, param)
+                .Compile();
+        }
+
+        public static Func<object, TProperty> GenerateGetter<TProperty>(PropertyInfo propertyInfo)
+        {
+            var sourceGetMethod = propertyInfo.GetGetMethod(true);
+            Debug.Assert(sourceGetMethod != null, nameof(sourceGetMethod) + " != null");
+
+            var param = Expression.Parameter(typeof(object), "param");
+
+            var targetType = propertyInfo.DeclaringType;
+            Debug.Assert(targetType != null, nameof(targetType) + " != null");
+
+            var convertedParam = Expression.Convert(param, targetType);
+
+            Expression getValueExpression = Expression.Property(convertedParam, propertyInfo.Name);
+
+            return Expression
+                .Lambda<Func<object, TProperty>>(getValueExpression, param)
+                .Compile();
+        }
+
+        
+
+        public static Func<object, object> GenerateGetter(PropertyInfo propertyInfo)
+        {
+            var sourceGetMethod = propertyInfo.GetGetMethod(true);
+            Debug.Assert(sourceGetMethod != null, nameof(sourceGetMethod) + " != null");
+
+            var target = Expression.Parameter(typeof(object), "param");
+
+            var targetType = propertyInfo.DeclaringType;
+            Debug.Assert(targetType != null, nameof(targetType) + " != null");
+
+            var convertedTarget = Expression.Convert(target, targetType);
+
+            var getValueExpression = Expression.Property(convertedTarget, propertyInfo.Name);
+            
+            return Expression
+                .Lambda<Func<object, object>>(Expression.Convert(getValueExpression, typeof(object)), target)
+                .Compile();
+        }
+
+        public static Action<object, BinaryReader> GenerateRead(PropertyInfo propertyInfo)
+        {
+            var targetParam = Expression.Parameter(typeof(object));
+            var readerParam = Expression.Parameter(typeof(BinaryReader));
+
+            var targetType = propertyInfo.DeclaringType;
+            Debug.Assert(targetType != null, nameof(targetType) + " != null");
+
+            var convertedTarget = Expression.Convert(targetParam, targetType);
+
+            var readMethod = Utils.GetReadMethod(propertyInfo);
+
+            if (readMethod == null)
+                throw new NotSupportedException($"Not supported serialization type: {propertyInfo.PropertyType} ");
+
+            var callRead = Expression.Call(readerParam, readMethod);
+
+            var valueExpr = propertyInfo.PropertyType.IsEnum ? (Expression)Expression.Convert(callRead, propertyInfo.PropertyType) : callRead;
+
+            var setMethodCall = Expression.Call(convertedTarget, propertyInfo.GetSetMethod(true), valueExpr);
+
+            return Expression.Lambda<Action<object, BinaryReader>>(setMethodCall, targetParam, readerParam).Compile();
+        }
+
+        public static Action<object, BinaryWriter> GenerateWrite(PropertyInfo propertyInfo)
+        {
+            var targetParam = Expression.Parameter(typeof(object));
+            var writerParam = Expression.Parameter(typeof(BinaryWriter));
+
+            var targetType = propertyInfo.DeclaringType;
+            Debug.Assert(targetType != null, nameof(targetType) + " != null");
+
+            var convertedTarget = Expression.Convert(targetParam, targetType);
+            var getValue = Expression.Property(convertedTarget, propertyInfo.Name);
+
+            var writeArgType = propertyInfo.PropertyType.IsEnum ? typeof(int) : propertyInfo.PropertyType;
+            var writeMethod = typeof(BinaryWriter).GetMethod("Write", new[] { writeArgType });
+            if (writeMethod == null)
+                throw new NotSupportedException($"Not supported serialization type: {propertyInfo.PropertyType} ");
+
+            var callWrite = Expression.Call(writerParam, writeMethod, getValue);
+
+            return Expression
+                .Lambda<Action<object, BinaryWriter>>(callWrite, targetParam, writerParam)
+                .Compile();
+        }
+    }
+}
