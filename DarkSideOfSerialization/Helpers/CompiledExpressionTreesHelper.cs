@@ -3,15 +3,14 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq.Expressions;
 using System.Reflection;
-// ReSharper disable AssignNullToNotNullAttribute
 
 namespace DarkSideOfSerialization.Helpers
 {
     public static class CompiledExpressionTreesHelper
     {
-        public static Action<TTarget, TParam> GenerateSetter<TTarget, TParam>(PropertyInfo propertyInfo)
+        public static Action<TTarget, TParam> GenerateSetter<TTarget, TParam>(PropertyInfo property)
         {
-            var setMethod = propertyInfo.GetSetMethod(true);
+            var setMethod = property.GetSetMethod(true);
             var targetParam = Expression.Parameter(typeof(TTarget));
             var valueParam = Expression.Parameter(typeof(TParam));
 
@@ -22,35 +21,19 @@ namespace DarkSideOfSerialization.Helpers
                 .Compile();
         }
 
-        public static Action<object, object> GenerateSetter(PropertyInfo propertyInfo)
+        public static Action<object, object> GenerateSetter(PropertyInfo property)
         {
-            var setMethod = propertyInfo.GetSetMethod(true);
+            var setMethod = property.GetSetMethod(true);
             var targetParam = Expression.Parameter(typeof(object));
             var valueParam = Expression.Parameter(typeof(object));
 
-            var convertedTarget = Expression.Convert(targetParam, propertyInfo.DeclaringType);
-            var convertedValue = Expression.Convert(valueParam, propertyInfo.PropertyType);
+            var convertedTarget = Expression.Convert(targetParam, property.DeclaringType);
+            var convertedValue = Expression.Convert(valueParam, property.PropertyType);
 
             var callSetter = Expression.Call(convertedTarget, setMethod, convertedValue);
 
             return Expression
                 .Lambda<Action<object, object>>(callSetter, targetParam, valueParam)
-                .Compile();
-        }
-
-        public static Action<object, TProperty> GenerateSetter<TProperty>(PropertyInfo propertyInfo)
-        {
-            var setMethod = propertyInfo.GetSetMethod(true);
-            var targetParam = Expression.Parameter(typeof(object));
-            var valueParam = Expression.Parameter(typeof(TProperty));
-            var targetType = propertyInfo.DeclaringType;
-            Debug.Assert(targetType != null, nameof(targetType) + " != null");
-
-            var convertedTarget = Expression.Convert(targetParam, targetType);
-
-            var callSetter = Expression.Call(convertedTarget, setMethod, valueParam);
-            return Expression
-                .Lambda<Action<object, TProperty>>(callSetter, targetParam, valueParam)
                 .Compile();
         }
 
@@ -67,27 +50,6 @@ namespace DarkSideOfSerialization.Helpers
                 .Lambda<Func<TTarget, TProperty>>(getValueExpression, param)
                 .Compile();
         }
-
-        public static Func<object, TProperty> GenerateGetter<TProperty>(PropertyInfo propertyInfo)
-        {
-            var sourceGetMethod = propertyInfo.GetGetMethod(true);
-            Debug.Assert(sourceGetMethod != null, nameof(sourceGetMethod) + " != null");
-
-            var param = Expression.Parameter(typeof(object), "param");
-
-            var targetType = propertyInfo.DeclaringType;
-            Debug.Assert(targetType != null, nameof(targetType) + " != null");
-
-            var convertedParam = Expression.Convert(param, targetType);
-
-            Expression getValueExpression = Expression.Property(convertedParam, propertyInfo.Name);
-
-            return Expression
-                .Lambda<Func<object, TProperty>>(getValueExpression, param)
-                .Compile();
-        }
-
-        
 
         public static Func<object, object> GenerateGetter(PropertyInfo propertyInfo)
         {
@@ -129,7 +91,9 @@ namespace DarkSideOfSerialization.Helpers
 
             var setMethodCall = Expression.Call(convertedTarget, propertyInfo.GetSetMethod(true), valueExpr);
 
-            return Expression.Lambda<Action<object, BinaryReader>>(setMethodCall, targetParam, readerParam).Compile();
+            return 
+                Expression.Lambda<Action<object, BinaryReader>>(setMethodCall, targetParam, readerParam)
+                .Compile();
         }
 
         public static Action<object, BinaryWriter> GenerateWrite(PropertyInfo propertyInfo)
@@ -150,8 +114,7 @@ namespace DarkSideOfSerialization.Helpers
 
             var callWrite = Expression.Call(writerParam, writeMethod, getValue);
 
-            return Expression
-                .Lambda<Action<object, BinaryWriter>>(callWrite, targetParam, writerParam)
+            return Expression.Lambda<Action<object, BinaryWriter>>(callWrite, targetParam, writerParam)
                 .Compile();
         }
     }

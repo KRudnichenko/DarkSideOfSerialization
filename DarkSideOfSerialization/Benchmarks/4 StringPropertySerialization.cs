@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Reflection;
 using System.Text;
@@ -16,7 +15,6 @@ namespace DarkSideOfSerialization.Benchmarks
     [Orderer(SummaryOrderPolicy.FastestToSlowest)]
     [GroupBenchmarksBy(BenchmarkLogicalGroupRule.ByCategory)]
     [CategoriesColumn]
-    [SuppressMessage("ReSharper", "ClassCanBeSealed.Global")]
     public class StringPropertySerialization
     {
         private readonly Test _test = new Test("Hello world!");

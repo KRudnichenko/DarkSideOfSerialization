@@ -4,7 +4,6 @@ using System.IO;
 using System.Reflection;
 using System.Reflection.Emit;
 using Sigil;
-// ReSharper disable UnusedMember.Local
 
 namespace DarkSideOfSerialization.Helpers
 {
@@ -20,13 +19,11 @@ namespace DarkSideOfSerialization.Helpers
 
         public static Action<TTarget, TParam> GenerateSetter<TTarget, TParam>(PropertyInfo propertyInfo)
         {
-            #region ...prepare...
-            var method = new DynamicMethod(propertyInfo.Name + "SetterTyped2", null,
+            var method = new DynamicMethod(propertyInfo.Name + "SetterTyped", null,
                 new[] { typeof(object), typeof(TParam) }, Module, true);
 
             var gen = method.GetILGenerator();
             var setMethod = propertyInfo.GetSetMethod(true);
-            #endregion
 
             gen.Emit(OpCodes.Ldarg_0);
             gen.Emit(OpCodes.Ldarg_1);
@@ -58,79 +55,39 @@ namespace DarkSideOfSerialization.Helpers
             return (Action<object, object>)method.CreateDelegate(typeof(Action<object, object>));
         }
 
-        public static Action<object, TProperty> GenerateSetter<TProperty>(PropertyInfo propertyInfo)
+        public static Func<TTarget, TParam> GenerateGetter<TTarget, TParam>(PropertyInfo property)
         {
-            var method = new DynamicMethod(propertyInfo.Name + "SetterTyped", null,
-                new[] { typeof(object), typeof(TProperty) }, Module, true);
-
-            var gen = method.GetILGenerator();
-            var setMethod = propertyInfo.GetSetMethod(true);
-            var targetType = propertyInfo.DeclaringType;
-            Debug.Assert(targetType != null, nameof(targetType) + " != null");
-
-            gen.Emit(OpCodes.Ldarg_0);
-            gen.Emit(OpCodes.Castclass, targetType);
-            gen.Emit(OpCodes.Ldarg_1);
-            gen.Emit(OpCodes.Call, setMethod);
-            gen.Emit(OpCodes.Ret);
-
-            return (Action<object, TProperty>)method.CreateDelegate(typeof(Action<object, TProperty>));
-        }
-
-        
-
-        public static Func<object, TProperty> GenerateGetter<TProperty>(PropertyInfo propertyInfo)
-        {
-            var method = new DynamicMethod(propertyInfo.Name + "GetterTyped", typeof(TProperty),
+            var method = new DynamicMethod(property.Name + "GetterTyped", typeof(TParam),
                 new[] { typeof(object) },
                 Module, true);
 
             var gen = method.GetILGenerator();
 
-            var getMethod = propertyInfo.GetGetMethod(true);
-            var targetType = propertyInfo.DeclaringType;
-            Debug.Assert(targetType != null, nameof(targetType) + " != null");
-
-            gen.Emit(OpCodes.Ldarg_0);
-            gen.Emit(OpCodes.Castclass, targetType);
-            gen.Emit(OpCodes.Call, getMethod);
-            gen.Emit(OpCodes.Ret);
-
-            return (Func<object, TProperty>)method.CreateDelegate(typeof(Func<object, TProperty>));
-        }
-
-        public static Func<TTarget, TProperty> GenerateGetter<TTarget, TProperty>(PropertyInfo propertyInfo)
-        {
-            var method = new DynamicMethod(propertyInfo.Name + "GetterTyped2", typeof(TProperty),
-                new[] { typeof(object) },
-                Module, true);
-
-            var gen = method.GetILGenerator();
-            var getMethod = propertyInfo.GetGetMethod(true);
+            var getMethod = property.GetGetMethod(true);
 
             gen.Emit(OpCodes.Ldarg_0);
             gen.Emit(OpCodes.Call, getMethod);
             gen.Emit(OpCodes.Ret);
 
-            return (Func<TTarget, TProperty>)method.CreateDelegate(typeof(Func<TTarget, TProperty>));
+            return (Func<TTarget, TParam>)method.CreateDelegate(typeof(Func<TTarget, TParam>));
         }
 
-        public static Func<object, object> GenerateGetter(PropertyInfo propertyInfo)
+        public static Func<object, object> GenerateGetter(PropertyInfo property)
         {
-            var method = new DynamicMethod(propertyInfo.Name + "Getter", typeof(object),
+            var method = new DynamicMethod(property.Name + "Getter", typeof(object),
                 new[] { typeof(object) },
                 Module, true);
 
             var gen = method.GetILGenerator();
 
-            var targetType = propertyInfo.DeclaringType;
+            var targetType = property.DeclaringType;
             Debug.Assert(targetType != null, nameof(targetType) + " != null");
 
             gen.Emit(OpCodes.Ldarg_0);
             gen.Emit(OpCodes.Castclass, targetType);
-            gen.Emit(OpCodes.Call, propertyInfo.GetGetMethod(true));
-            if (propertyInfo.PropertyType.IsValueType)
-                gen.Emit(OpCodes.Box, propertyInfo.PropertyType);
+            gen.Emit(OpCodes.Call, property.GetGetMethod(true));
+            if (property.PropertyType.IsValueType)
+                gen.Emit(OpCodes.Box, property.PropertyType);
             gen.Emit(OpCodes.Ret);
 
             return (Func<object, object>)method.CreateDelegate(typeof(Func<object, object>));

@@ -41,7 +41,7 @@ namespace DarkSideOfSerialization.Helpers
             return target => func((TTarget)target);
         }
 
-        public static TDelegate CreateDelegate<TDelegate>(MethodInfo method)
+        private static TDelegate CreateDelegate<TDelegate>(MethodInfo method)
             where TDelegate : Delegate
         {
             return (TDelegate)Delegate.CreateDelegate(typeof(TDelegate), method);

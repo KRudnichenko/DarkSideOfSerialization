@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Configs;
@@ -14,7 +13,6 @@ namespace DarkSideOfSerialization.Benchmarks
     [CategoriesColumn]
     [MemoryDiagnoser]
     [Orderer(SummaryOrderPolicy.FastestToSlowest)]
-    [SuppressMessage("ReSharper", "ClassCanBeSealed.Global")]
     public class IntPropertyTypedVsReflectionStyleAccess
     {
 

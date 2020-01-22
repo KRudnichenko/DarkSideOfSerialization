@@ -1,13 +1,5 @@
-﻿using System;
-using System.Diagnostics.CodeAnalysis;
-// ReSharper disable AutoPropertyCanBeMadeGetOnly.Local
-// ReSharper disable UnusedAutoPropertyAccessor.Local
-// ReSharper disable ClassCanBeSealed.Global
-
-namespace Types
+﻿namespace Types
 {
-    [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
-
     public sealed class Test
     {
         public Test( int intPropertyValue)

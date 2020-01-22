@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Configs;
@@ -9,8 +8,6 @@ using BenchmarkDotNet.Order;
 using DarkSideOfSerialization.Helpers;
 using FastMember;
 using Types;
-// ReSharper disable FieldCanBeMadeReadOnly.Local
-// ReSharper disable ArrangeTypeMemberModifiers
 
 namespace DarkSideOfSerialization.Benchmarks
 {
@@ -19,7 +16,6 @@ namespace DarkSideOfSerialization.Benchmarks
     [MemoryDiagnoser]
     [Orderer(SummaryOrderPolicy.FastestToSlowest)]
     [Config(typeof(Config))]
-    [SuppressMessage("ReSharper", "ClassCanBeSealed.Global")]
     public class StringPropertyAccess
     {
         private sealed class Config : ManualConfig
@@ -103,10 +99,10 @@ namespace DarkSideOfSerialization.Benchmarks
         [BenchmarkCategory(SetCategory), Benchmark]
         public void SetViaDelegate() => _setDelegate(_test, nameof(SetViaDelegate));
 
-        Func<object, string> _ilGenGetter 
-            = ILGenHelper.GenerateGetter<string>(CachedPropertyInfo);
+        Func<Test, string> _ilGenGetter 
+            = ILGenHelper.GenerateGetter<Test, string>(CachedPropertyInfo);
 
-        private readonly Action<object, string> _ilGenSetter = ILGenHelper.GenerateSetter<string>(CachedPropertyInfo);
+        private readonly Action<Test, string> _ilGenSetter = ILGenHelper.GenerateSetter<Test, string>(CachedPropertyInfo);
 
         [BenchmarkCategory(GetCategory), Benchmark]
         public string GetViaILGen()
@@ -116,10 +112,10 @@ namespace DarkSideOfSerialization.Benchmarks
         public void SetViaILGen()
             => _ilGenSetter(_test, nameof(SetViaILGen));
 
-        Func<object, string> _compiledExpressionTreesGetter 
-            = CompiledExpressionTreesHelper.GenerateGetter<string>(CachedPropertyInfo);
+        Func<Test, string> _compiledExpressionTreesGetter 
+            = CompiledExpressionTreesHelper.GenerateGetter<Test, string>(CachedPropertyInfo);
 
-        private readonly Action<object, string> _compiledExpressionTreesSetter = CompiledExpressionTreesHelper.GenerateSetter<string>(CachedPropertyInfo);
+        private readonly Action<Test,  string> _compiledExpressionTreesSetter = CompiledExpressionTreesHelper.GenerateSetter<Test, string>(CachedPropertyInfo);
 
         [BenchmarkCategory(GetCategory), Benchmark]
         public string GetViaCompiledExpressionTrees()

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Configs;
@@ -16,7 +15,6 @@ namespace DarkSideOfSerialization.Benchmarks
     [MemoryDiagnoser]
     [Orderer(SummaryOrderPolicy.FastestToSlowest)]
     [Config(typeof(Config))]
-    [SuppressMessage("ReSharper", "ClassCanBeSealed.Global")]
     public class StringPropertyTypedVsReflectionStyleAccess
     {
         private sealed class Config : ManualConfig
