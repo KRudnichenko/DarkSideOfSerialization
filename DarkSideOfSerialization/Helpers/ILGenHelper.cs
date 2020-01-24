@@ -20,7 +20,7 @@ namespace DarkSideOfSerialization.Helpers
         public static Action<TTarget, TParam> GenerateSetter<TTarget, TParam>(PropertyInfo propertyInfo)
         {
             var method = new DynamicMethod(propertyInfo.Name + "SetterTyped", null,
-                new[] { typeof(object), typeof(TParam) }, Module, true);
+                new[] { typeof(TTarget), typeof(TParam) }, Module, true);
 
             var gen = method.GetILGenerator();
             var setMethod = propertyInfo.GetSetMethod(true);
@@ -58,7 +58,7 @@ namespace DarkSideOfSerialization.Helpers
         public static Func<TTarget, TParam> GenerateGetter<TTarget, TParam>(PropertyInfo property)
         {
             var method = new DynamicMethod(property.Name + "GetterTyped", typeof(TParam),
-                new[] { typeof(object) },
+                new[] { typeof(TTarget) },
                 Module, true);
 
             var gen = method.GetILGenerator();
