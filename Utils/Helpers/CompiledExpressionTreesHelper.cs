@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq.Expressions;
@@ -15,7 +16,7 @@ namespace DarkSideOfSerialization.Helpers
             var valueParam = Expression.Parameter(typeof(TParam));
 
             var callSetter = Expression.Call(targetParam, setMethod, valueParam);
-            
+
             return Expression
                 .Lambda<Action<TTarget, TParam>>(callSetter, targetParam, valueParam)
                 .Compile();
@@ -64,7 +65,7 @@ namespace DarkSideOfSerialization.Helpers
             var convertedTarget = Expression.Convert(target, targetType);
 
             var getValueExpression = Expression.Property(convertedTarget, propertyInfo.Name);
-            
+
             return Expression
                 .Lambda<Func<object, object>>(Expression.Convert(getValueExpression, typeof(object)), target)
                 .Compile();
@@ -91,9 +92,41 @@ namespace DarkSideOfSerialization.Helpers
 
             var setMethodCall = Expression.Call(convertedTarget, propertyInfo.GetSetMethod(true), valueExpr);
 
-            return 
+            return
                 Expression.Lambda<Action<object, BinaryReader>>(setMethodCall, targetParam, readerParam)
                 .Compile();
+        }
+
+        public static Action<object, BinaryReader> GenerateRead(PropertyInfo[] propertyInfos)
+        {
+            Debug.Assert(propertyInfos.Length > 0, "propertyInfos.Length > 0");
+
+            var targetParam = Expression.Parameter(typeof(object));
+            var readerParam = Expression.Parameter(typeof(BinaryReader));
+
+            var targetType = propertyInfos[0].DeclaringType;
+            Debug.Assert(targetType != null, nameof(targetType) + " != null");
+            var convertedTarget = Expression.Convert(targetParam, targetType);
+
+            var serializationSteps = new List<Expression>();
+            foreach (var propertyInfo in propertyInfos)
+            {
+                var readMethod = Utils.GetReadMethod(propertyInfo);
+
+                if (readMethod == null)
+                    throw new NotSupportedException($"Not supported serialization type: {propertyInfo.PropertyType} ");
+
+                var callRead = Expression.Call(readerParam, readMethod);
+
+                var valueExpr = propertyInfo.PropertyType.IsEnum ? (Expression)Expression.Convert(callRead, propertyInfo.PropertyType) : callRead;
+
+                var setMethodCall = Expression.Call(convertedTarget, propertyInfo.GetSetMethod(true), valueExpr);
+                serializationSteps.Add(setMethodCall);
+            }
+
+            return
+                Expression.Lambda<Action<object, BinaryReader>>(Expression.Block(serializationSteps), targetParam, readerParam)
+                    .Compile();
         }
 
         public static Action<object, BinaryWriter> GenerateWrite(PropertyInfo propertyInfo)
@@ -115,6 +148,37 @@ namespace DarkSideOfSerialization.Helpers
             var callWrite = Expression.Call(writerParam, writeMethod, getValue);
 
             return Expression.Lambda<Action<object, BinaryWriter>>(callWrite, targetParam, writerParam)
+                .Compile();
+        }
+
+        public static Action<object, BinaryWriter> GenerateWrite(PropertyInfo[] propertyInfos)
+        {
+            Debug.Assert(propertyInfos.Length > 0, "propertyInfos.Length > 0");
+
+            var targetParam = Expression.Parameter(typeof(object));
+            var writerParam = Expression.Parameter(typeof(BinaryWriter));
+
+            var targetType = propertyInfos[0].DeclaringType;
+            Debug.Assert(targetType != null, nameof(targetType) + " != null");
+            var convertedTarget = Expression.Convert(targetParam, targetType);
+
+            var serializationSteps = new List<Expression>();
+            foreach (var propertyInfo in propertyInfos)
+            {
+                var getValue = Expression.Property(convertedTarget, propertyInfo.Name);
+
+                var writeArgType = propertyInfo.PropertyType.IsEnum ? typeof(int) : propertyInfo.PropertyType;
+                var writeMethod = typeof(BinaryWriter).GetMethod("Write", new[] { writeArgType });
+                if (writeMethod == null)
+                    throw new NotSupportedException($"Not supported serialization type: {propertyInfo.PropertyType} ");
+
+                var callWrite = Expression.Call(writerParam, writeMethod, getValue);
+                serializationSteps.Add(callWrite);
+            }
+
+            var block = Expression.Block(serializationSteps);
+
+            return Expression.Lambda<Action<object, BinaryWriter>>(block, targetParam, writerParam)
                 .Compile();
         }
     }

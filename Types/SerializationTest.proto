@@ -1,0 +1,9 @@
+syntax = "proto3";
+package SerializationTest;
+
+option csharp_namespace = "DarkSideOfSerialization.Proto";
+
+message Test {
+  string string_property = 1;
+  int32 int_property = 2;  
+}

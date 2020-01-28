@@ -1,5 +1,8 @@
-﻿namespace Types
+﻿using System;
+
+namespace Types
 {
+    [Serializable]
     public sealed class Test
     {
         public Test( int intPropertyValue)
@@ -13,6 +16,7 @@
         }
 
         public string StringProperty { get; set; }
+        
         private string PrivateStringProperty { get; set; }
 
         public int IntProperty { get; set; }

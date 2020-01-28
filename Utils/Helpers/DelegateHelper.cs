@@ -14,21 +14,14 @@ namespace DarkSideOfSerialization.Helpers
         public static Func<object, object> GetGetMethod(PropertyInfo propertyInfo)
         {
             var getMethod = propertyInfo.GetGetMethod(true);
-            Debug.Assert(getMethod != null, nameof(getMethod) + " != null");
-
             var generic = helperClass.GetMethod(methodHelperName, bindingFlags);
-            Debug.Assert(generic != null, nameof(generic) + " != null");
 
             var targetType = propertyInfo.DeclaringType;
-            Debug.Assert(targetType != null, nameof(targetType) + " != null");
-
             var returnType = getMethod.ReturnType;
 
             var constructed = generic.MakeGenericMethod(targetType, returnType);
 
             var result = constructed.Invoke(null, new object[] { getMethod });
-
-            Debug.Assert(result != null, nameof(result) + " != null");
 
             return (Func<object, object>)result;
         }
@@ -38,7 +31,7 @@ namespace DarkSideOfSerialization.Helpers
         {
             var func = CreateDelegate<Func<TTarget, TReturn>>(method);
 
-            return target => func((TTarget)target);
+            return target => (object)func((TTarget)target);
         }
 
         private static TDelegate CreateDelegate<TDelegate>(MethodInfo method)
@@ -50,29 +43,25 @@ namespace DarkSideOfSerialization.Helpers
         public static Action<object, object> GetSetMethod(PropertyInfo propertyInfo)
         {
             var setMethod = propertyInfo.GetSetMethod(true);
-            Debug.Assert(setMethod != null, nameof(setMethod) + " != null");
 
-            var genericHelper = typeof(DelegateHelper).GetMethod(nameof(GetSetMethodHelper), BindingFlags.Static | BindingFlags.NonPublic);
-            Debug.Assert(genericHelper != null, nameof(genericHelper) + " != null");
+            var genericHelper = helperClass.GetMethod(nameof(GetSetMethodHelper), bindingFlags);
 
             var targetType = propertyInfo.DeclaringType;
-            Debug.Assert(targetType != null, nameof(targetType) + " != null");
+            var propertyType = propertyInfo.PropertyType;
 
-            var constructedHelper = genericHelper.MakeGenericMethod(targetType, setMethod.GetParameters()[0].ParameterType);
+            var constructedHelper = genericHelper.MakeGenericMethod(targetType, propertyType);
 
             var result = constructedHelper.Invoke(null, new object[] { setMethod });
-
-            Debug.Assert(result != null, nameof(result) + " != null");
 
             return (Action<object, object>)result;
         }
 
-        private static Action<object, object> GetSetMethodHelper<TTarget, TParam>(MethodInfo method)
+        static Action<object, object> GetSetMethodHelper<TTarget, TParam>(MethodInfo method)
             where TTarget : class
         {
-            var func = CreateDelegate<Action<TTarget, TParam>>(method);
+            var setter = CreateDelegate<Action<TTarget, TParam>>(method);
 
-            return (target, value) => func((TTarget)target, (TParam)value);
+            return (object target, object value) => setter((TTarget)target, (TParam)value);
         }
 
         public static Action<object, BinaryWriter> GenerateWrite(PropertyInfo propertyInfo)
@@ -94,7 +83,7 @@ namespace DarkSideOfSerialization.Helpers
 
             return (Action<object, BinaryWriter>)constructedHelper.Invoke(null, new object[] { writeDelegate, getPropDelegate });
         }
-
+            
         private static Action<object, TWriter> WriteMethodHelper<TWriter, TTarget, TProperty>(Action<TWriter, TProperty> write, Func<TTarget, TProperty> getter)
         {
             return (t, w) => write(w, getter((TTarget)t));
